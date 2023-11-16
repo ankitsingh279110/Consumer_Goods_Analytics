@@ -79,7 +79,6 @@ JOIN
 SELECT
     fmc.product_code,
     dp.product,
-    fmc.cost_year,
     fmc.manufacturing_cost
 FROM
     dim_product dp
