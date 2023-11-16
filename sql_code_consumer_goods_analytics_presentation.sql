@@ -117,6 +117,118 @@ LIMIT 5;
 
 #TASK 7
 
+WITH temp_table AS (
+    SELECT 
+        customer,
+        monthname(date) AS months,
+        month(date) AS month_number, 
+        year(date) AS year,
+        (sold_quantity * gross_price) AS gross_sales
+    FROM 
+        fact_sales_monthly s
+        JOIN fact_gross_price g ON s.product_code = g.product_code
+        JOIN dim_customer c ON s.customer_code = c.customer_code
+    WHERE 
+        customer = "Atliq exclusive"
+)
+SELECT 
+    months,
+    year,
+    CONCAT(ROUND(SUM(gross_sales) / 1000000, 2), "M") AS gross_sales
+FROM 
+    temp_table
+GROUP BY 
+    year, months
+ORDER BY 
+    year, MIN(month_number);
+
+#TASK 8
+
+WITH temp_table AS (
+  SELECT 
+    date,
+    month(date_add(date, interval 4 month)) AS period,
+    get_fiscal_year(date) AS fiscal_year,
+    sold_quantity 
+  FROM 
+    fact_sales_monthly
+)
+SELECT 
+  CASE 
+    WHEN period / 3 <= 1 THEN "Q1"
+    WHEN period / 3 <= 2 AND period / 3 > 1 THEN "Q2"
+    WHEN period / 3 <= 3 AND period / 3 > 2 THEN "Q3"
+    WHEN period / 3 <= 4 AND period / 3 > 3 THEN "Q4"
+  END AS quarter,
+  ROUND(SUM(sold_quantity) / 1000000, 2) AS total_sold_quantity_in_millions 
+FROM 
+  temp_table
+WHERE 
+  fiscal_year = 2020
+GROUP BY 
+  quarter
+ORDER BY 
+  total_sold_quantity_in_millions;
+
+#TASK 9
+
+WITH sales_summary AS (
+    SELECT
+        c.channel,
+        SUM(s.sold_quantity * g.gross_price) AS total_sales
+    FROM
+        fact_sales_monthly s
+        JOIN fact_gross_price g ON s.product_code = g.product_code
+        JOIN dim_customer c ON s.customer_code = c.customer_code
+    WHERE
+        get_fiscal_year(s.date) = 2021
+    GROUP BY
+        c.channel
+),
+sales_percentage AS (
+    SELECT
+        channel,
+        ROUND(total_sales / 1000000, 2) AS gross_sales_in_millions,
+        ROUND(total_sales / (SUM(total_sales) OVER ()) * 100, 2) AS percentage
+    FROM
+        sales_summary
+)
+SELECT
+    channel,
+    gross_sales_in_millions,
+    percentage
+FROM
+    sales_percentage
+    ORDER BY
+	percentage;
+
+#TASK 10
+
+WITH temp_table AS (
+    SELECT 
+        division,
+        fsm.product_code,
+        CONCAT(dp.product, '(', dp.variant, ')') AS product,
+        SUM(sold_quantity) AS total_sold_quantity,
+        RANK() OVER (PARTITION BY division ORDER BY SUM(sold_quantity) DESC) AS rank_order
+    FROM
+        fact_sales_monthly fsm
+        JOIN dim_product dp ON fsm.product_code = dp.product_code
+    WHERE
+        fiscal_year = 2021
+    GROUP BY
+        division, product_code
+)
+SELECT 
+    division,
+    product_code,
+    product,
+    total_sold_quantity,
+    rank_order
+FROM 
+    temp_table
+WHERE 
+    rank_order IN (1, 2, 3);
 
 
 
