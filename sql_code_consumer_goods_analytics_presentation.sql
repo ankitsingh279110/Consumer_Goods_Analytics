@@ -76,6 +76,49 @@ JOIN
 
 #TASK 5
 
+SELECT
+    fmc.product_code,
+    dp.product,
+    fmc.cost_year,
+    fmc.manufacturing_cost
+FROM
+    dim_product dp
+JOIN
+    fact_manufacturing_cost fmc USING (product_code)
+WHERE
+    fmc.manufacturing_cost = (SELECT MAX(manufacturing_cost) FROM fact_manufacturing_cost)
+    OR fmc.manufacturing_cost = (SELECT MIN(manufacturing_cost) FROM fact_manufacturing_cost)
+ORDER BY
+    fmc.manufacturing_cost DESC;
+
+#TASK 6
+
+SELECT
+    customer_code,
+    customer,
+    ROUND(AVG(pre_invoice_discount_pct), 4) AS average_discount_percentage
+FROM (
+    SELECT
+        dc.customer_code,
+        dc.customer,
+        fpid.pre_invoice_discount_pct
+    FROM
+        fact_pre_invoice_deductions fpid
+    JOIN
+        dim_customer dc ON fpid.customer_code = dc.customer_code
+    WHERE
+        dc.market = 'India' AND fpid.fiscal_year = '2021'
+) AS subquery
+GROUP BY
+    customer_code, customer
+ORDER BY
+    average_discount_percentage DESC
+LIMIT 5;
+
+#TASK 7
+
+
+
 
 
 
